@@ -1,0 +1,81 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/29bf36a9-e937-ceb3-d5ef-7ce96c37bb16')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/29bf36a9-e937-ceb3-d5ef-7ce96c37bb16')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "Successful sign-in after repeated failures",
+                "description": "A user signs in successfully from an IP that previously failed 10 or more times against the same account in the window. Possible brute force success.",
+                "severity": "High",
+                "enabled": true,
+                "query": "let failedSignIns = SigninLogs\n    | where ResultType in (\"50053\", \"50126\")\n    | summarize FailedAttempts = count(), LastFailure = max(TimeGenerated) by UserPrincipalName, IPAddress\n    | where FailedAttempts >= 10;\nSigninLogs\n| where ResultType == \"0\"\n| join kind=inner failedSignIns on UserPrincipalName, IPAddress\n| where TimeGenerated > LastFailure\n| project TimeGenerated, UserPrincipalName, IPAddress, AppDisplayName, FailedAttempts, LastFailure",
+                "queryFrequency": "PT1H",
+                "queryPeriod": "PT1H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "InitialAccess",
+                    "CredentialAccess"
+                ],
+                "techniques": [
+                    "T1110",
+                    "T1078"
+                ],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": null,
+                        "groupByAlertDetails": null,
+                        "groupByCustomDetails": null
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "UserPrincipalName"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "IPAddress"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}
